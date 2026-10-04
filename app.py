@@ -16,6 +16,7 @@ def main():
 
     repo = Repository(args.db)
     repo.initialize()
+    repo.migrate()
     if args.init:
         print("initialized: %s" % args.db)
         return

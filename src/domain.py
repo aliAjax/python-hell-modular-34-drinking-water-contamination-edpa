@@ -61,6 +61,9 @@ def normalize_create(payload):
     population = int(payload.get("population", 0) or 0)
     if population < 0:
         raise DomainError("invalid_population", "受影响人数不能为负数")
+    region = payload.get("region")
+    if region is not None and (not isinstance(region, str) or not region.strip()):
+        raise DomainError("invalid_region", "区域编号必须是字符串")
     stable_key = "%s|%s|%s" % (source_id, contaminant, detected_at)
     return {
         "source_id": source_id,
@@ -74,6 +77,7 @@ def normalize_create(payload):
         "notifications": [],
         "response_actions": [],
         "sample_results": [],
+        "region": region.strip() if isinstance(region, str) else None,
         "_stable_key": stable_key,
     }
 
@@ -91,3 +95,44 @@ def normalize_source(payload):
         "note": payload.get("note", ""),
     }
     return result
+
+
+DEFAULT_UNIT_CODE = "UNIT-1"
+
+
+def normalize_batch(payload):
+    """开工批次：绑定污染事件、支路与机组，带回计划加药量。"""
+    branch_code = require_text(payload, "zone_id")
+    unit_code = payload.get("unit_id") or DEFAULT_UNIT_CODE
+    if not isinstance(unit_code, str) or not unit_code.strip():
+        raise DomainError("invalid_unit", "机组编号必须是字符串")
+    planned_dosage = number(payload, "planned_dosage", 0)
+    note = payload.get("note", "")
+    return {
+        "branch_code": branch_code.strip(),
+        "unit_code": unit_code.strip(),
+        "planned_dosage": planned_dosage,
+        "note": note if isinstance(note, str) else "",
+    }
+
+
+def normalize_receipt(payload):
+    """回执：带回实际加药量与成败。"""
+    actual_dosage = number(payload, "actual_dosage", 0)
+    if actual_dosage <= 0:
+        raise DomainError("invalid_dosage", "实际加药量必须大于零")
+    if "success" not in payload:
+        raise DomainError("receipt_status_required", "回执必须包含 success 字段", 400)
+    success = bool(payload.get("success"))
+    note = payload.get("note", "")
+    return {
+        "actual_dosage": actual_dosage,
+        "success": success,
+        "note": note if isinstance(note, str) else "",
+    }
+
+
+def normalize_release(payload):
+    """放行：监管/协调对批次强制结案。"""
+    note = payload.get("note", "")
+    return {"note": note if isinstance(note, str) else ""}

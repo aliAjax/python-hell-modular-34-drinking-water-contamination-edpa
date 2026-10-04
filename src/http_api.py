@@ -2,7 +2,7 @@ import json
 import mimetypes
 import os
 from http.server import BaseHTTPRequestHandler
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 from .domain import DomainError
 
@@ -45,19 +45,30 @@ def build_handler(service, static_dir):
 
         def do_GET(self):
             try:
-                path = urlparse(self.path).path
+                parsed = urlparse(self.path)
+                path = parsed.path
+                query = parse_qs(parsed.query)
                 if path == "/health":
                     return self._send(200, {"status": "ok"})
                 if path == "/api/state":
                     return self._send(200, service.state())
                 if path == "/api/items":
                     return self._send(200, {"items": service.list_items()})
+                if path == "/api/branches":
+                    return self._send(200, {"branches": service.list_branches()})
+                if path == "/api/units":
+                    return self._send(200, {"units": service.list_units()})
+                if path == "/api/batches":
+                    status = query.get("status", [None])[0]
+                    return self._send(200, {"batches": service.list_batches(status=status)})
                 parts = [part for part in path.split("/") if part]
                 if len(parts) == 3 and parts[:2] == ["api", "items"]:
                     return self._send(200, service.get_item(int(parts[2])))
                 if len(parts) == 4 and parts[:2] == ["api", "items"] and parts[3] == "audit":
                     item = service.get_item(int(parts[2]))
                     return self._send(200, {"events": item["audit"]})
+                if len(parts) == 3 and parts[:2] == ["api", "batches"]:
+                    return self._send(200, service.get_batch(int(parts[2])))
                 if path == "/":
                     file_path = os.path.join(static_dir, "index.html")
                     with open(file_path, "rb") as handle:
@@ -86,6 +97,18 @@ def build_handler(service, static_dir):
                         raise DomainError("action_required", "缺少 action", 400)
                     expected = payload.pop("expected_version", None)
                     return self._send(200, service.act(int(parts[2]), action, payload, actor, role, expected, region))
+                if len(parts) == 4 and parts[:2] == ["api", "items"] and parts[3] == "batches":
+                    return self._send(201, service.submit_batch(int(parts[2]), payload, actor, role, region))
+                if len(parts) == 4 and parts[:2] == ["api", "batches"] and parts[3] == "receipt":
+                    return self._send(200, service.submit_receipt(int(parts[2]), payload, actor, role, region))
+                if len(parts) == 4 and parts[:2] == ["api", "batches"] and parts[3] == "retry":
+                    return self._send(200, service.retry_batch(int(parts[2]), payload, actor, role, region))
+                if len(parts) == 4 and parts[:2] == ["api", "batches"] and parts[3] == "release":
+                    return self._send(200, service.release_batch(int(parts[2]), payload, actor, role, region))
+                if len(parts) == 4 and parts[:2] == ["api", "branches"] and parts[3] == "upstream":
+                    branch_code = parts[2]
+                    upstream_code = payload.get("upstream_code")
+                    return self._send(200, service.set_branch_upstream(branch_code, upstream_code, actor, role))
                 return self._send(404, {"error": "not_found", "message": "接口不存在"})
             except DomainError as exc:
                 return self._error(exc)
