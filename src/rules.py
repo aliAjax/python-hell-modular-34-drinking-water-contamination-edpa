@@ -14,9 +14,18 @@ ACTION_ROLES = {
     "restore": {"coordinator", "regulator"},
     "cancel": {"coordinator"},
 }
-ENFORCE_REGION = False
-REGION_SENSITIVE_ACTIONS = set()
+ENFORCE_REGION = True
+REGION_SENSITIVE_ACTIONS = {"batch_start"}
 ACTION_REQUIRES_VERSION = {"advise", "switch_source", "flush", "disinfect", "sample", "restore", "cancel"}
+
+# 冲洗与消毒共用一台移动消毒机组：开批与回执角色
+BATCH_START_ROLES = {"field_operator", "regulator"}
+BATCH_RECEIPT_ROLES = {"field_operator", "lab"}
+BRANCH_REGISTER_ROLES = {"dispatcher", "regulator"}
+UNIT_REGISTER_ROLES = {"dispatcher", "regulator"}
+RETEST_ROLES = {"lab", "field_operator", "regulator"}
+# 监管可跨支路放行；现场角色越支路边界一律拒绝
+CROSS_BRANCH_ROLES = {"regulator"}
 
 
 def assess(payload):

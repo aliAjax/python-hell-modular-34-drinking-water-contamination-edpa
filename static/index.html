@@ -1,5 +1,14 @@
-<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>饮用水污染响应</title><body><h1>市政饮用水污染响应</h1><p>使用 JSON API 创建污染事件、登记水源或管网记录，并完成复检、通知、冲洗、消毒和恢复。</p><pre>GET /health
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>饮用水污染响应</title><body><h1>市政饮用水污染响应</h1><p>使用 JSON API 创建污染事件、登记水源或管网记录，并完成复检、通知、冲洗、消毒和恢复。</p><p>冲洗与消毒共用移动消毒机组：开批占用机组与支路，回执带回实际加药量；污染来源更新时整批失效、下游已恢复区域退回待复检；先到者领批、后到者拿排队号，回执失败按序重试且不重复加药；监管可跨支路放行，现场越界返回 403。</p><pre>GET /health
 GET /api/state
 POST /api/items
 POST /api/items/{id}/sources
-POST /api/items/{id}/actions</pre></body></html>
+POST /api/items/{id}/actions
+POST /api/items/{id}/retests
+POST /api/units
+POST /api/branches
+GET  /api/branches
+GET  /api/units/{code}
+POST /api/batches
+GET  /api/batches?unit=&amp;status=
+GET  /api/batches/{id}
+POST /api/batches/{id}/receipts</pre></body></html>
